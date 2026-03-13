@@ -1,19 +1,27 @@
-# Production VPS Deployment Guide
+# 🚀 Production VPS Deployment Guide
 
-## Project: sampleProject 01
+This repository provides a **step-by-step guide to deploy a full-stack application on a production VPS** using:
 
-This document explains how to deploy the **sampleProject full-stack application** on a production VPS.
+* **Ubuntu Server**
+* **Node.js**
+* **PM2 Process Manager**
+* **Nginx Reverse Proxy**
+* **React / Static Frontend**
+* **MongoDB Atlas**
+* **Let's Encrypt SSL**
 
-Architecture:
+---
+
+# 🏗 Architecture
 
 ```
 Internet
    ↓
-Nginx (80/443)
+Nginx (80 / 443)
    ↓
-Frontend (sampleProject.com)
+Frontend (sampleproject.com)
    ↓
-Backend API (app.sampleProject.com)
+Backend API (app.sampleproject.com)
    ↓
 Node.js (PM2)
    ↓
@@ -22,7 +30,28 @@ MongoDB Atlas
 
 ---
 
-# 1. Connect to VPS
+# 📋 Prerequisites
+
+Before starting you should have:
+
+* A VPS (Ubuntu 22+ / 24+ recommended)
+* A domain name
+* Backend Git repository
+* Frontend Git repository
+* MongoDB Atlas connection string
+
+Example server:
+
+```
+Ubuntu 24.04
+1 vCPU
+512MB RAM
+10GB Storage
+```
+
+---
+
+# 1️⃣ Connect to VPS
 
 ```
 ssh root@SERVER_IP
@@ -31,18 +60,20 @@ ssh root@SERVER_IP
 Example:
 
 ```
-ssh root@64.227.174.172
+ssh root@11.111.111.111
 ```
 
 ---
 
-# 2. Update Server
+# 2️⃣ Update Server
+
+Always update packages before installation.
 
 ```
 apt update && apt upgrade -y
 ```
 
-Install useful tools:
+Install essential tools:
 
 ```
 apt install curl git ufw -y
@@ -50,7 +81,9 @@ apt install curl git ufw -y
 
 ---
 
-# 3. Add Swap (Important for small VPS)
+# 3️⃣ Add Swap (Important for Small VPS)
+
+Small servers need swap memory.
 
 ```
 fallocate -l 1G /swapfile
@@ -61,7 +94,7 @@ swapon /swapfile
 echo '/swapfile none swap sw 0 0' >> /etc/fstab
 ```
 
-Verify:
+Verify swap:
 
 ```
 free -m
@@ -69,14 +102,14 @@ free -m
 
 ---
 
-# 4. Install Node.js
+# 4️⃣ Install Node.js
 
 ```
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt install -y nodejs
 ```
 
-Verify:
+Verify installation:
 
 ```
 node -v
@@ -85,15 +118,15 @@ npm -v
 
 ---
 
-# 5. Install PM2
+# 5️⃣ Install PM2
 
-PM2 keeps the Node server running.
+PM2 keeps your Node.js server running even after crashes or reboot.
 
 ```
 npm install -g pm2
 ```
 
-Check:
+Verify:
 
 ```
 pm2 -v
@@ -101,19 +134,19 @@ pm2 -v
 
 ---
 
-# 6. Setup Backend
+# 6️⃣ Setup Backend Application
 
-Create project directory:
+Create backend directory:
 
 ```
 mkdir -p /var/www/backend
 cd /var/www/backend
 ```
 
-Clone backend repo:
+Clone repository:
 
 ```
-git clone BACKEND_REPO_URL .
+git clone BACKEND_REPOSITORY_URL .
 ```
 
 Install dependencies:
@@ -122,7 +155,7 @@ Install dependencies:
 npm install
 ```
 
-Create `.env` file:
+Create environment variables file:
 
 ```
 nano .env
@@ -133,24 +166,24 @@ Example:
 ```
 PORT=3910
 NODE_ENV=production
-MONGO_URI=YOUR_MONGO_URI
+MONGO_URI=YOUR_MONGODB_URI
 JWT_SECRET=YOUR_SECRET
 ```
 
-Start backend with PM2:
+Start backend using PM2:
 
 ```
 pm2 start server.js --name backend
 ```
 
-Save PM2 config:
+Save PM2 configuration:
 
 ```
 pm2 save
 pm2 startup
 ```
 
-Check:
+Check running processes:
 
 ```
 pm2 status
@@ -158,13 +191,13 @@ pm2 status
 
 ---
 
-# 7. Install Nginx
+# 7️⃣ Install Nginx
 
 ```
 apt install nginx -y
 ```
 
-Start service:
+Start and enable nginx:
 
 ```
 systemctl start nginx
@@ -173,9 +206,9 @@ systemctl enable nginx
 
 ---
 
-# 8. Backend Nginx Configuration
+# 8️⃣ Backend Nginx Configuration
 
-Create config:
+Create backend config file:
 
 ```
 nano /etc/nginx/sites-available/backend
@@ -184,7 +217,7 @@ nano /etc/nginx/sites-available/backend
 ```
 server {
     listen 80;
-    server_name app.sampleProject.com;
+    server_name app.sampleproject.com;
 
     location / {
         proxy_pass http://127.0.0.1:3910;
@@ -193,12 +226,13 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
+
         proxy_cache_bypass $http_upgrade;
     }
 }
 ```
 
-Enable it:
+Enable backend configuration:
 
 ```
 ln -s /etc/nginx/sites-available/backend /etc/nginx/sites-enabled/
@@ -206,20 +240,20 @@ ln -s /etc/nginx/sites-available/backend /etc/nginx/sites-enabled/
 
 ---
 
-# 9. Setup Frontend
+# 9️⃣ Setup Frontend
 
-Create directory:
+Create frontend directory:
 
 ```
 mkdir -p /var/www/frontend
 cd /var/www/frontend
 ```
 
-Clone frontend:
+Clone frontend repository:
 
 ```
-git clone FRONTEND_REPO_URL
-cd FRONTEND_FOLDER
+git clone FRONTEND_REPOSITORY_URL
+cd FRONTEND_PROJECT_FOLDER
 ```
 
 Install dependencies:
@@ -228,13 +262,13 @@ Install dependencies:
 npm install
 ```
 
-Build production files:
+Build production frontend:
 
 ```
 npm run build
 ```
 
-Copy build output:
+Copy build files:
 
 ```
 cp -r dist/* /var/www/frontend/
@@ -242,7 +276,7 @@ cp -r dist/* /var/www/frontend/
 
 ---
 
-# 10. Frontend Nginx Configuration
+# 🔟 Frontend Nginx Configuration
 
 ```
 nano /etc/nginx/sites-available/frontend
@@ -251,7 +285,7 @@ nano /etc/nginx/sites-available/frontend
 ```
 server {
     listen 80;
-    server_name sampleProject.com www.sampleProject.com;
+    server_name sampleproject.com www.sampleproject.com;
 
     root /var/www/frontend;
     index index.html;
@@ -262,13 +296,13 @@ server {
 }
 ```
 
-Enable site:
+Enable frontend site:
 
 ```
 ln -s /etc/nginx/sites-available/frontend /etc/nginx/sites-enabled/
 ```
 
-Remove default config:
+Remove default nginx config:
 
 ```
 rm /etc/nginx/sites-enabled/default
@@ -288,7 +322,7 @@ systemctl restart nginx
 
 ---
 
-# 11. Configure Firewall
+# 1️⃣1️⃣ Configure Firewall
 
 ```
 ufw allow OpenSSH
@@ -296,28 +330,36 @@ ufw allow 'Nginx Full'
 ufw enable
 ```
 
+Check firewall:
+
+```
+ufw status
+```
+
 ---
 
-# 12. Configure DNS
+# 1️⃣2️⃣ Configure DNS
 
-DNS Records:
+Add DNS records for your domain.
 
-```
-A    @      SERVER_IP
-A    app    SERVER_IP
-CNAME www   sampleProject.com
-```
+Example:
+
+| Type  | Name | Value             |
+| ----- | ---- | ----------------- |
+| A     | @    | SERVER_IP         |
+| A     | app  | SERVER_IP         |
+| CNAME | www  | sampleproject.com |
 
 Example:
 
 ```
-sampleProject.com → 64.227.174.172
-app.sampleProject.com → 64.227.174.172
+sampleproject.com → 11.111.111.111
+app.sampleproject.com → 11.111.111.111
 ```
 
 ---
 
-# 13. Install SSL (HTTPS)
+# 1️⃣3️⃣ Install SSL (HTTPS)
 
 Install Certbot:
 
@@ -327,19 +369,19 @@ snap refresh core
 snap install --classic certbot
 ```
 
-Frontend SSL:
+Install SSL for frontend:
 
 ```
-certbot --nginx -d sampleProject.com -d www.sampleProject.com
+certbot --nginx -d sampleproject.com -d www.sampleproject.com
 ```
 
-Backend SSL:
+Install SSL for backend:
 
 ```
-certbot --nginx -d app.sampleProject.com
+certbot --nginx -d app.sampleproject.com
 ```
 
-Test auto-renew:
+Test automatic renewal:
 
 ```
 certbot renew --dry-run
@@ -347,9 +389,9 @@ certbot renew --dry-run
 
 ---
 
-# 14. Useful Commands
+# 🛠 Useful Commands
 
-Check backend logs:
+View backend logs:
 
 ```
 pm2 logs backend
@@ -361,7 +403,7 @@ Restart backend:
 pm2 restart backend
 ```
 
-Check nginx:
+Check nginx status:
 
 ```
 systemctl status nginx
@@ -373,7 +415,7 @@ Restart nginx:
 systemctl restart nginx
 ```
 
-Check server usage:
+Monitor server resources:
 
 ```
 htop
@@ -381,9 +423,9 @@ htop
 
 ---
 
-# 15. Deployment Update Flow
+# 🔄 Deployment Update Workflow
 
-When updating backend:
+### Update Backend
 
 ```
 cd /var/www/backend
@@ -392,10 +434,10 @@ npm install
 pm2 restart backend
 ```
 
-When updating frontend:
+### Update Frontend
 
 ```
-cd /var/www/frontend/FRONTEND_FOLDER
+cd /var/www/frontend/FRONTEND_PROJECT_FOLDER
 git pull
 npm install
 npm run build
@@ -405,23 +447,23 @@ systemctl restart nginx
 
 ---
 
-# Final URLs
+# 🌐 Final URLs
 
 Frontend:
 
 ```
-https://sampleProject.com
+https://sampleproject.com
 ```
 
 Backend API:
 
 ```
-https://app.sampleProject.com
+https://app.sampleproject.com
 ```
 
 ---
 
-# Server Structure
+# 📁 Server Folder Structure
 
 ```
 /var/www
@@ -437,6 +479,15 @@ https://app.sampleProject.com
 
 ---
 
-# Done ✅
+# ✅ Deployment Complete
 
-Your production server is now fully deployed.
+Your **production VPS server is now ready**.
+
+You now have:
+
+* Node.js backend running with **PM2**
+* React frontend served via **Nginx**
+* Domain routing
+* **HTTPS SSL**
+* Firewall security
+* Production-ready setup
